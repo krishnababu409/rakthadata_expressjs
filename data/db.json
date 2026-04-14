@@ -1,0 +1,118 @@
+{
+  "counters": {
+    "users": 4,
+    "donors": 2,
+    "receivers": 2,
+    "requests": 2,
+    "appointments": 1,
+    "notifications": 3,
+    "donationHistory": 1
+  },
+  "users": [
+    {
+      "id": 1,
+      "name": "Administrator",
+      "email": "admin@rakthata.com",
+      "password": "$2a$10$oT4gsugWRPJUgGRmuKMcbuqopT3NtGKOQTgouj3fPvdfj0fzj1kxG",
+      "phone": "9999999999",
+      "role": "admin",
+      "location": "System",
+      "age": 30,
+      "is_active": true,
+      "created_at": "2026-04-14T06:58:11.160Z",
+      "updated_at": "2026-04-14T06:58:11.160Z"
+    },
+    {
+      "id": 2,
+      "name": "Test Donor",
+      "email": "donor1@example.com",
+      "password": "$2a$10$YWjC3P/qpk56lwq8.lIwD.EO430SgvU4oJEQ3HPBzH3jmAwc34Q/u",
+      "phone": "9876543210",
+      "role": "donor",
+      "location": "Bangalore",
+      "age": 28,
+      "is_active": true,
+      "created_at": "2026-04-14T06:58:33.391Z",
+      "updated_at": "2026-04-14T06:58:33.391Z"
+    },
+    {
+      "id": 3,
+      "name": "Test Receiver",
+      "email": "receiver1@example.com",
+      "password": "$2a$10$sinIWqxOXPGY1eCC7O/2b.6e4CaogTDGYC2ZVgHmM6KzFOEOvz9VK",
+      "phone": "9876543211",
+      "role": "receiver",
+      "location": "Bangalore",
+      "age": 32,
+      "is_active": true,
+      "created_at": "2026-04-14T06:58:45.326Z",
+      "updated_at": "2026-04-14T06:58:45.326Z"
+    }
+  ],
+  "donors": [
+    {
+      "id": 1,
+      "user_id": 2,
+      "blood_group": "O+",
+      "is_available": true,
+      "total_donations": 0,
+      "last_donation_date": null,
+      "next_eligible_date": null,
+      "medical_history": ""
+    }
+  ],
+  "receivers": [
+    {
+      "id": 1,
+      "user_id": 3,
+      "medical_condition": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": ""
+    }
+  ],
+  "requests": [
+    {
+      "id": 1,
+      "request_number": "REQ2026040002",
+      "receiver_id": 1,
+      "patient_name": "Emergency Patient",
+      "patient_age": 40,
+      "blood_group": "O+",
+      "units_needed": 2,
+      "hospital_name": "Apollo Hospital",
+      "location": "Bangalore",
+      "urgency": "critical",
+      "status": "assigned",
+      "reason": "Emergency transfusion",
+      "assigned_donor_id": 1,
+      "assigned_at": "2026-04-14T06:58:55.592Z",
+      "fulfilled_at": null,
+      "created_at": "2026-04-14T06:58:45.439Z",
+      "updated_at": "2026-04-14T06:58:55.592Z"
+    }
+  ],
+  "appointments": [],
+  "notifications": [
+    {
+      "id": 1,
+      "user_id": 2,
+      "title": "New Blood Request",
+      "message": "Urgent blood request for O+ at Apollo Hospital. 2 unit(s) needed.",
+      "type": "request",
+      "related_id": 1,
+      "is_read": false,
+      "created_at": "2026-04-14T06:58:45.439Z"
+    },
+    {
+      "id": 2,
+      "user_id": 3,
+      "title": "Donor Responded",
+      "message": "A donor with blood group O+ has responded to your blood request.",
+      "type": "response",
+      "related_id": 1,
+      "is_read": false,
+      "created_at": "2026-04-14T06:58:55.592Z"
+    }
+  ],
+  "donationHistory": []
+}
