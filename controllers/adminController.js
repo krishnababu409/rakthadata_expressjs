@@ -3,7 +3,7 @@ const { getState, createNotification, save } = require('../data/store');
 // Get system statistics
 const getSystemStats = async (req, res) => {
   try {
-    const state = getState();
+    const state = await getState();
     res.json({
       success: true,
       stats: {
@@ -28,7 +28,7 @@ const getSystemStats = async (req, res) => {
 const getAllUsers = async (req, res) => {
   try {
     const { role, status, page = 1, limit = 20 } = req.query;
-    const state = getState();
+    const state = await getState();
     const usersList = state.users
       .filter((item) => item.role !== 'admin')
       .filter((item) => !role || item.role === role)
@@ -73,7 +73,7 @@ const updateUserStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { isActive } = req.body;
-    const state = getState();
+    const state = await getState();
     const user = state.users.find((item) => item.id === Number(id));
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -83,7 +83,7 @@ const updateUserStatus = async (req, res) => {
       return res.status(403).json({ error: 'Cannot deactivate admin user' });
     }
     user.is_active = Boolean(isActive);
-    save();
+    await save(state);
 
     res.json({
       success: true,
@@ -99,7 +99,7 @@ const updateUserStatus = async (req, res) => {
 const getAllBloodRequests = async (req, res) => {
   try {
     const { status, urgency, page = 1, limit = 20 } = req.query;
-    const state = getState();
+    const state = await getState();
     const all = state.requests
       .filter((item) => !status || item.status === status)
       .filter((item) => !urgency || item.urgency === urgency)
@@ -139,7 +139,7 @@ const getAllBloodRequests = async (req, res) => {
 const getAllAppointments = async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
-    const state = getState();
+    const state = await getState();
     const all = state.appointments
       .filter((item) => !status || item.status === status)
       .map((item) => {
@@ -178,7 +178,7 @@ const getAllAppointments = async (req, res) => {
 const getDonationReports = async (req, res) => {
   try {
     const { period = 'month', startDate, endDate } = req.query;
-    const state = getState();
+    const state = await getState();
     let filtered = [...state.donationHistory];
     if (startDate && endDate) {
       filtered = filtered.filter((item) => item.donation_date >= startDate && item.donation_date <= endDate);
@@ -235,16 +235,16 @@ const getDonationReports = async (req, res) => {
 const sendBroadcast = async (req, res) => {
   try {
     const { title, message, userRole } = req.body;
-    const state = getState();
+    const state = await getState();
     const users = state.users.filter((item) => item.is_active && (!userRole || userRole === 'all' || item.role === userRole));
-    users.forEach((user) => {
-      createNotification({
+    for (const user of users) {
+      await createNotification({
         userId: user.id,
         title,
         message,
         type: 'system'
-      });
-    });
+      }, state);
+    }
 
     res.json({
       success: true,

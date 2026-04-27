@@ -4,7 +4,7 @@ const { getState, save } = require('../data/store');
 const getNotifications = async (req, res) => {
   try {
     const { isRead, page = 1, limit = 20 } = req.query;
-    const state = getState();
+    const state = await getState();
     const filtered = state.notifications
       .filter((item) => item.user_id === req.user.id)
       .filter((item) => isRead === undefined || item.is_read === (isRead === 'true'))
@@ -34,11 +34,11 @@ const getNotifications = async (req, res) => {
 const markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
-    const state = getState();
+    const state = await getState();
     const notification = state.notifications.find((item) => item.id === Number(id) && item.user_id === req.user.id);
     if (notification) {
       notification.is_read = true;
-      save();
+      await save(state);
     }
 
     res.json({
@@ -54,11 +54,11 @@ const markAsRead = async (req, res) => {
 // Mark all notifications as read
 const markAllAsRead = async (req, res) => {
   try {
-    const state = getState();
+    const state = await getState();
     state.notifications.forEach((item) => {
       if (item.user_id === req.user.id) item.is_read = true;
     });
-    save();
+    await save(state);
 
     res.json({
       success: true,
@@ -74,9 +74,9 @@ const markAllAsRead = async (req, res) => {
 const deleteNotification = async (req, res) => {
   try {
     const { id } = req.params;
-    const state = getState();
+    const state = await getState();
     state.notifications = state.notifications.filter((item) => !(item.id === Number(id) && item.user_id === req.user.id));
-    save();
+    await save(state);
 
     res.json({
       success: true,
@@ -91,9 +91,9 @@ const deleteNotification = async (req, res) => {
 // Delete all read notifications
 const deleteReadNotifications = async (req, res) => {
   try {
-    const state = getState();
+    const state = await getState();
     state.notifications = state.notifications.filter((item) => !(item.user_id === req.user.id && item.is_read));
-    save();
+    await save(state);
 
     res.json({
       success: true,

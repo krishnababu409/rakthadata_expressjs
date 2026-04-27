@@ -21,15 +21,15 @@ const createRequest = async (req, res) => {
       reason
     } = req.body;
 
-    const state = getState();
+    const state = await getState();
     const receiver = state.receivers.find((item) => item.user_id === req.user.id);
     if (!receiver) {
       return res.status(404).json({ error: 'Receiver profile not found' });
     }
 
     const request = {
-      id: nextId('requests'),
-      request_number: generateCode('REQ', 'requests'),
+      id: nextId('requests', state),
+      request_number: generateCode('REQ', 'requests', state),
       receiver_id: receiver.id,
       patient_name: patientName,
       patient_age: Number(patientAge),
@@ -49,22 +49,20 @@ const createRequest = async (req, res) => {
 
     state.requests.push(request);
 
-    state.donors
-      .filter((donor) => donor.blood_group === bloodGroup && donor.is_available)
-      .forEach((donor) => {
-        const user = state.users.find((item) => item.id === donor.user_id && item.is_active);
-        if (user) {
-          createNotification({
-            userId: user.id,
-            title: 'New Blood Request',
-            message: `Urgent blood request for ${bloodGroup} at ${hospitalName}. ${unitsNeeded} unit(s) needed.`,
-            type: 'request',
-            relatedId: request.id
-          });
-        }
-      });
+    for (const donor of state.donors.filter((item) => item.blood_group === bloodGroup && item.is_available)) {
+      const user = state.users.find((item) => item.id === donor.user_id && item.is_active);
+      if (user) {
+        await createNotification({
+          userId: user.id,
+          title: 'New Blood Request',
+          message: `Urgent blood request for ${bloodGroup} at ${hospitalName}. ${unitsNeeded} unit(s) needed.`,
+          type: 'request',
+          relatedId: request.id
+        }, state);
+      }
+    }
 
-    save();
+    await save(state);
 
     res.status(201).json({
       success: true,
@@ -82,7 +80,7 @@ const createRequest = async (req, res) => {
 const getAllRequests = async (req, res) => {
   try {
     const { bloodGroup, location, urgency, status, page = 1, limit = 20 } = req.query;
-    const state = getState();
+    const state = await getState();
     const filtered = state.requests
       .filter((item) => (status ? item.status === status : item.status === 'pending'))
       .filter((item) => !bloodGroup || item.blood_group === bloodGroup)
@@ -121,7 +119,7 @@ const getAllRequests = async (req, res) => {
 const getRequestById = async (req, res) => {
   try {
     const { id } = req.params;
-    const state = getState();
+    const state = await getState();
     const request = state.requests.find((item) => item.id === Number(id));
     if (!request) {
       return res.status(404).json({ error: 'Request not found' });
@@ -153,7 +151,7 @@ const getRequestById = async (req, res) => {
 const respondToRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const state = getState();
+    const state = await getState();
     const donor = state.donors.find((item) => item.user_id === req.user.id);
     if (!donor) {
       return res.status(404).json({ error: 'Donor profile not found' });
@@ -168,15 +166,15 @@ const respondToRequest = async (req, res) => {
     request.updated_at = now();
     const receiver = state.receivers.find((item) => item.id === request.receiver_id);
     if (receiver) {
-      createNotification({
+      await createNotification({
         userId: receiver.user_id,
         title: 'Donor Responded',
         message: `A donor with blood group ${donor.blood_group} has responded to your blood request.`,
         type: 'response',
         relatedId: request.id
-      });
+      }, state);
     }
-    save();
+    await save(state);
 
     res.json({
       success: true,
@@ -193,7 +191,7 @@ const updateRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const state = getState();
+    const state = await getState();
     const request = state.requests.find((item) => item.id === Number(id));
 
     const validStatuses = ['pending', 'assigned', 'fulfilled', 'cancelled'];
@@ -215,7 +213,7 @@ const updateRequestStatus = async (req, res) => {
         donor.last_donation_date = new Date().toISOString().slice(0, 10);
         donor.next_eligible_date = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
         state.donationHistory.push({
-          id: nextId('donationHistory'),
+          id: nextId('donationHistory', state),
           donor_id: donor.id,
           appointment_id: null,
           donation_date: new Date().toISOString().slice(0, 10),
@@ -227,7 +225,7 @@ const updateRequestStatus = async (req, res) => {
       }
     }
 
-    save();
+    await save(state);
 
     res.json({
       success: true,

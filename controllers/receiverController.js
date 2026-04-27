@@ -3,7 +3,7 @@ const { getState, publicUser } = require('../data/store');
 // Get receiver dashboard data
 const getReceiverDashboard = async (req, res) => {
   try {
-    const state = getState();
+    const state = await getState();
     const user = state.users.find((item) => item.id === req.user.id);
     const receiver = state.receivers.find((item) => item.user_id === req.user.id);
     if (!user || !receiver) {
@@ -16,7 +16,7 @@ const getReceiverDashboard = async (req, res) => {
 
     res.json({
       success: true,
-      receiver: publicUser(user),
+      receiver: publicUser(user, state),
       activeRequests,
       stats: {
         total_requests: allRequests.length,
@@ -34,7 +34,7 @@ const getReceiverDashboard = async (req, res) => {
 const searchDonors = async (req, res) => {
   try {
     const { bloodGroup, location, page = 1, limit = 20 } = req.query;
-    const state = getState();
+    const state = await getState();
     const matching = state.donors
       .filter((donor) => donor.is_available)
       .map((donor) => {
@@ -79,7 +79,7 @@ const searchDonors = async (req, res) => {
 const getMyRequests = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
-    const state = getState();
+    const state = await getState();
     const receiver = state.receivers.find((item) => item.user_id === req.user.id);
     if (!receiver) {
       return res.status(404).json({ error: 'Receiver not found' });
@@ -121,7 +121,7 @@ const getMyRequests = async (req, res) => {
 const getRequestDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const state = getState();
+    const state = await getState();
     const receiver = state.receivers.find((item) => item.user_id === req.user.id);
     const request = state.requests.find((item) => item.id === Number(id) && receiver && item.receiver_id === receiver.id);
     if (!request) {
@@ -150,13 +150,13 @@ const getRequestDetails = async (req, res) => {
 // Get receiver profile
 const getReceiverProfile = async (req, res) => {
   try {
-    const state = getState();
+    const state = await getState();
     const user = state.users.find((item) => item.id === req.user.id);
     if (!user || user.role !== 'receiver') {
       return res.status(404).json({ error: 'Receiver not found' });
     }
 
-    res.json({ success: true, receiver: publicUser(user) });
+    res.json({ success: true, receiver: publicUser(user, state) });
   } catch (error) {
     console.error('Get receiver profile error:', error);
     res.status(500).json({ error: 'Failed to load profile' });

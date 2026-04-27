@@ -21,24 +21,26 @@ const generateToken = (user) => {
 const register = async (req, res) => {
   try {
     const { name, email, password, phone, role, location, age, bloodGroup } = req.body;
-    const state = getState();
+    const state = await getState();
+    const normalizedEmail = email.trim().toLowerCase();
 
-    const existingUser = state.users.find((user) => user.email === email);
+    const existingUser = state.users.find((user) => user.email === normalizedEmail);
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists with this email' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = {
-      id: nextId('users'),
-      name,
-      email,
+      id: nextId('users', state),
+      name: name.trim(),
+      email: normalizedEmail,
       password: hashedPassword,
-      phone,
+      phone: phone.trim(),
       role,
-      location,
-      age: Number(age),
+      location: location.trim(),
+      age: age === undefined || age === null || age === '' ? null : Number(age),
       is_active: true,
+      last_login: null,
       created_at: now(),
       updated_at: now()
     };
@@ -50,7 +52,7 @@ const register = async (req, res) => {
         return res.status(400).json({ error: 'Blood group required for donor registration' });
       }
       state.donors.push({
-        id: nextId('donors'),
+        id: nextId('donors', state),
         user_id: user.id,
         blood_group: bloodGroup,
         is_available: true,
@@ -61,7 +63,7 @@ const register = async (req, res) => {
       });
     } else if (role === 'receiver') {
       state.receivers.push({
-        id: nextId('receivers'),
+        id: nextId('receivers', state),
         user_id: user.id,
         medical_condition: '',
         emergency_contact_name: '',
@@ -69,12 +71,12 @@ const register = async (req, res) => {
       });
     }
 
-    save();
+    await save(state);
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      user: publicUser(user)
+      user: publicUser(user, state)
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -85,16 +87,13 @@ const register = async (req, res) => {
 // User login
 const login = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
-    const state = getState();
-    const user = state.users.find((item) => item.email === email && item.is_active);
+    const { email, password } = req.body;
+    const state = await getState();
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = state.users.find((item) => item.email === normalizedEmail && item.is_active);
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    if (role && user.role !== role) {
-      return res.status(401).json({ error: `Invalid credentials for ${role} account` });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -103,7 +102,10 @@ const login = async (req, res) => {
     }
 
     const token = generateToken(user);
-    const userData = publicUser(user);
+    const userData = publicUser(user, state);
+    user.last_login = now();
+    user.updated_at = now();
+    await save(state);
 
     res.json({
       success: true,
@@ -120,13 +122,13 @@ const login = async (req, res) => {
 // Get current user profile
 const getMe = async (req, res) => {
   try {
-    const state = getState();
+    const state = await getState();
     const user = state.users.find((item) => item.id === req.user.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ success: true, user: publicUser(user) });
+    res.json({ success: true, user: publicUser(user, state) });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Failed to get profile' });
@@ -137,7 +139,7 @@ const getMe = async (req, res) => {
 const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const state = getState();
+    const state = await getState();
     const user = state.users.find((item) => item.id === req.user.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -150,7 +152,7 @@ const changePassword = async (req, res) => {
 
     user.password = await bcrypt.hash(newPassword, 10);
     user.updated_at = now();
-    save();
+    await save(state);
 
     res.json({ success: true, message: 'Password changed successfully' });
   } catch (error) {
@@ -163,16 +165,16 @@ const changePassword = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const { name, phone, location, age, bloodGroup, emergencyContactName, emergencyContactPhone } = req.body;
-    const state = getState();
+    const state = await getState();
     const user = state.users.find((item) => item.id === req.user.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (name) user.name = name;
-    if (phone) user.phone = phone;
-    if (location) user.location = location;
-    if (age) user.age = Number(age);
+    if (name !== undefined) user.name = name.trim();
+    if (phone !== undefined) user.phone = phone.trim();
+    if (location !== undefined) user.location = location.trim();
+    if (age !== undefined) user.age = age === '' || age === null ? null : Number(age);
     user.updated_at = now();
 
     if (req.user.role === 'donor') {
@@ -188,7 +190,7 @@ const updateProfile = async (req, res) => {
       }
     }
 
-    save();
+    await save(state);
 
     res.json({ success: true, message: 'Profile updated successfully' });
   } catch (error) {

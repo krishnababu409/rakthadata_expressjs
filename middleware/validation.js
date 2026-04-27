@@ -17,10 +17,15 @@ const validateRegister = [
   body('name').notEmpty().withMessage('Name is required').isLength({ min: 2, max: 100 }),
   body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('phone').matches(/^[6-9]\d{9}$/).withMessage('Valid Indian phone number required'),
+  body('phone')
+    .trim()
+    .notEmpty()
+    .withMessage('Phone is required')
+    .isLength({ max: 15 })
+    .withMessage('Phone must be at most 15 characters'),
   body('role').isIn(['donor', 'receiver']).withMessage('Role must be donor or receiver'),
   body('location').notEmpty().withMessage('Location is required'),
-  body('age').isInt({ min: 18, max: 100 }).withMessage('Age must be between 18 and 100'),
+  body('age').optional({ nullable: true, checkFalsy: true }).isInt({ min: 1, max: 120 }).withMessage('Age must be between 1 and 120'),
   body('bloodGroup').optional().isIn(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']),
   handleValidationErrors
 ];
@@ -56,9 +61,9 @@ const validateAppointment = [
 // Update profile validation
 const validateProfileUpdate = [
   body('name').optional().isLength({ min: 2, max: 100 }),
-  body('phone').optional().matches(/^[6-9]\d{9}$/),
+  body('phone').optional().trim().isLength({ max: 15 }),
   body('location').optional().notEmpty(),
-  body('age').optional().isInt({ min: 18, max: 100 }),
+  body('age').optional({ nullable: true, checkFalsy: true }).isInt({ min: 1, max: 120 }),
   body('bloodGroup').optional().isIn(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']),
   handleValidationErrors
 ];

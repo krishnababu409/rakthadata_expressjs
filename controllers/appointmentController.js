@@ -11,14 +11,14 @@ const {
 const createAppointment = async (req, res) => {
   try {
     const { hospitalName, location, appointmentDate, appointmentTime, notes, receiverId } = req.body;
-    const state = getState();
+    const state = await getState();
     const donor = state.donors.find((item) => item.user_id === req.user.id);
     if (!donor) {
       return res.status(404).json({ error: 'Donor profile not found' });
     }
     const appointment = {
-      id: nextId('appointments'),
-      appointment_number: generateCode('APT', 'appointments'),
+      id: nextId('appointments', state),
+      appointment_number: generateCode('APT', 'appointments', state),
       donor_id: donor.id,
       receiver_id: receiverId ? Number(receiverId) : null,
       hospital_name: hospitalName,
@@ -31,14 +31,14 @@ const createAppointment = async (req, res) => {
       updated_at: now()
     };
     state.appointments.push(appointment);
-    createNotification({
+    await createNotification({
       userId: req.user.id,
       title: 'Appointment Confirmed',
       message: `Your donation appointment at ${hospitalName} on ${appointmentDate} at ${appointmentTime} has been scheduled.`,
       type: 'appointment',
       relatedId: appointment.id
-    });
-    save();
+    }, state);
+    await save(state);
 
     res.status(201).json({
       success: true,
@@ -56,7 +56,7 @@ const createAppointment = async (req, res) => {
 const getDonorAppointments = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
-    const state = getState();
+    const state = await getState();
     const donor = state.donors.find((item) => item.user_id === req.user.id);
     if (!donor) {
       return res.status(404).json({ error: 'Donor profile not found' });
@@ -97,7 +97,7 @@ const getDonorAppointments = async (req, res) => {
 const getReceiverAppointments = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
-    const state = getState();
+    const state = await getState();
     const receiver = state.receivers.find((item) => item.user_id === req.user.id);
     if (!receiver) {
       return res.status(404).json({ error: 'Receiver profile not found' });
@@ -139,14 +139,14 @@ const getReceiverAppointments = async (req, res) => {
 const cancelAppointment = async (req, res) => {
   try {
     const { id } = req.params;
-    const state = getState();
+    const state = await getState();
     const appointment = state.appointments.find((item) => item.id === Number(id) && item.status === 'upcoming');
     if (!appointment) {
       return res.status(404).json({ error: 'Appointment not found or cannot be cancelled' });
     }
     appointment.status = 'cancelled';
     appointment.updated_at = now();
-    save();
+    await save(state);
 
     res.json({
       success: true,
@@ -163,7 +163,7 @@ const rescheduleAppointment = async (req, res) => {
   try {
     const { id } = req.params;
     const { appointmentDate, appointmentTime } = req.body;
-    const state = getState();
+    const state = await getState();
     const appointment = state.appointments.find((item) => item.id === Number(id) && item.status === 'upcoming');
     if (!appointment) {
       return res.status(404).json({ error: 'Appointment not found or cannot be rescheduled' });
@@ -171,7 +171,7 @@ const rescheduleAppointment = async (req, res) => {
     appointment.appointment_date = appointmentDate;
     appointment.appointment_time = appointmentTime;
     appointment.updated_at = now();
-    save();
+    await save(state);
 
     res.json({
       success: true,
@@ -187,7 +187,7 @@ const rescheduleAppointment = async (req, res) => {
 const completeAppointment = async (req, res) => {
   try {
     const { id } = req.params;
-    const state = getState();
+    const state = await getState();
     const appointment = state.appointments.find((item) => item.id === Number(id) && item.status === 'upcoming');
     if (!appointment) {
       return res.status(404).json({ error: 'Appointment not found or already completed' });
@@ -200,7 +200,7 @@ const completeAppointment = async (req, res) => {
       donor.last_donation_date = new Date().toISOString().slice(0, 10);
       donor.next_eligible_date = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       state.donationHistory.push({
-        id: nextId('donationHistory'),
+        id: nextId('donationHistory', state),
         donor_id: donor.id,
         appointment_id: appointment.id,
         donation_date: new Date().toISOString().slice(0, 10),
@@ -210,7 +210,7 @@ const completeAppointment = async (req, res) => {
         created_at: now()
       });
     }
-    save();
+    await save(state);
 
     res.json({
       success: true,

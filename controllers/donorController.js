@@ -3,7 +3,7 @@ const { getState, publicUser, save } = require('../data/store');
 // Get donor dashboard data
 const getDonorDashboard = async (req, res) => {
   try {
-    const state = getState();
+    const state = await getState();
     const donor = state.donors.find((item) => item.user_id === req.user.id);
     if (!donor) {
       return res.status(404).json({ error: 'Donor profile not found' });
@@ -43,13 +43,13 @@ const getDonorDashboard = async (req, res) => {
 const updateAvailability = async (req, res) => {
   try {
     const { isAvailable } = req.body;
-    const state = getState();
+    const state = await getState();
     const donor = state.donors.find((item) => item.user_id === req.user.id);
     if (!donor) {
       return res.status(404).json({ error: 'Donor profile not found' });
     }
     donor.is_available = Boolean(isAvailable);
-    save();
+    await save(state);
 
     res.json({ 
       success: true, 
@@ -65,7 +65,7 @@ const updateAvailability = async (req, res) => {
 const getDonationHistory = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
-    const state = getState();
+    const state = await getState();
     const donor = state.donors.find((item) => item.user_id === req.user.id);
     if (!donor) {
       return res.status(404).json({ error: 'Donor profile not found' });
@@ -95,7 +95,7 @@ const getDonationHistory = async (req, res) => {
 // Get donor stats
 const getDonorStats = async (req, res) => {
   try {
-    const state = getState();
+    const state = await getState();
     const donor = state.donors.find((item) => item.user_id === req.user.id);
     const history = donor ? state.donationHistory.filter((item) => item.donor_id === donor.id) : [];
     res.json({
@@ -118,13 +118,13 @@ const getDonorStats = async (req, res) => {
 // Get donor profile
 const getDonorProfile = async (req, res) => {
   try {
-    const state = getState();
+    const state = await getState();
     const user = state.users.find((item) => item.id === req.user.id);
     if (!user || user.role !== 'donor') {
       return res.status(404).json({ error: 'Donor not found' });
     }
 
-    res.json({ success: true, donor: publicUser(user) });
+    res.json({ success: true, donor: publicUser(user, state) });
   } catch (error) {
     console.error('Get donor profile error:', error);
     res.status(500).json({ error: 'Failed to load profile' });
@@ -135,13 +135,13 @@ const getDonorProfile = async (req, res) => {
 const updateMedicalHistory = async (req, res) => {
   try {
     const { medicalHistory } = req.body;
-    const state = getState();
+    const state = await getState();
     const donor = state.donors.find((item) => item.user_id === req.user.id);
     if (!donor) {
       return res.status(404).json({ error: 'Donor not found' });
     }
     donor.medical_history = medicalHistory || '';
-    save();
+    await save(state);
 
     res.json({ success: true, message: 'Medical history updated successfully' });
   } catch (error) {
